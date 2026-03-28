@@ -9,13 +9,14 @@ A practical guide to reading every metric in your dashboard, understanding what 
 1. [Account Overview](#1-account-overview)
 2. [Growth & Reach Trends](#2-growth--reach-trends)
 3. [Content Performance](#3-content-performance)
-4. [Audience Demographics](#4-audience-demographics)
-5. [Optimal Posting Times](#5-optimal-posting-times)
-6. [Hashtag Analysis](#6-hashtag-analysis)
-7. [Stories Performance](#7-stories-performance)
-8. [Marketing KPI Summary](#8-marketing-kpi-summary)
-9. [Benchmarks & Thresholds](#9-benchmarks--thresholds)
-10. [What's NOT Tracked (Limitations)](#10-whats-not-tracked)
+4. [Boost & Ad Strategy Performance](#4-boost--ad-strategy-performance)
+5. [Audience Demographics](#5-audience-demographics)
+6. [Optimal Posting Times](#6-optimal-posting-times)
+7. [Hashtag Analysis](#7-hashtag-analysis)
+8. [Stories Performance](#8-stories-performance)
+9. [Marketing KPI Summary](#9-marketing-kpi-summary)
+10. [Benchmarks & Thresholds](#10-benchmarks--thresholds)
+11. [What's NOT Tracked (Limitations)](#11-whats-not-tracked)
 
 ---
 
@@ -147,7 +148,107 @@ Four separate rankings showing your best posts by:
 
 ---
 
-## 4. Audience Demographics
+## 4. Boost & Ad Strategy Performance
+
+This section requires a **Meta Ad Account ID** and an access token with `ads_read` permission. It pulls data from the Meta Marketing API to analyze your paid/boosted content.
+
+### 4a. Overview KPIs
+
+| Metric | What It Means | What to Look At |
+|--------|--------------|-----------------|
+| **Total Ad Spend** | Total money spent on Instagram ads in the period | Your budget consumption. Compare to results below. |
+| **Paid Reach** | Unique accounts reached through paid ads | How many new people your money is reaching. |
+| **Paid Impressions** | Total ad views (includes repeat views) | Higher than reach = people seeing your ad multiple times. |
+| **Total Clicks** | All clicks on your ads (profile, link, CTA, etc.) | General interest signal. |
+| **Avg CPM** | Cost per 1,000 impressions | **Lower = better.** Instagram average: $5-$15. Above $20 = your targeting may be too narrow or competitive. |
+| **Avg CPC** | Cost per click | **Lower = better.** Average: $0.50-$2.00. Above $3 = ad creative or targeting needs work. |
+| **Avg CTR** | Click-through rate (clicks / impressions * 100) | **Higher = better.** Average: 0.5-1.5%. Above 2% = great ad creative. Below 0.3% = ad fatigue or poor targeting. |
+| **Avg Frequency** | Average times each person saw your ad | 1.0-2.0 is ideal. Above 3.0 = ad fatigue (people are seeing it too much, start rotating creatives). |
+| **Post Engagements** | Likes, comments, shares, saves from paid promotion | Shows if the boosted content resonates. |
+| **Link Clicks** | Clicks specifically on links (to website, shop, etc.) | **Direct business value.** Most relevant for conversion goals. |
+| **Messages Started** | New conversations initiated from ads | **Order-related metric.** If you get orders via DM, this is your key number. |
+| **Cost per Engagement** | Spend / total engagements | Lower = more efficient. Compare across campaigns to find the best strategy. |
+
+### 4b. Organic vs Paid Comparison
+
+These bar charts show reach, impressions, and engagements side by side for organic and paid content.
+
+**How to read it:**
+- If **paid >> organic**: You're relying heavily on ads for visibility. Work on organic content strategy to reduce ad dependency.
+- If **organic >> paid**: Your content is naturally strong. Boost your best organic performers for even more impact.
+- **Ideal balance**: Organic provides a strong base; paid amplifies your top content to new audiences.
+
+### 4c. Campaign Comparison Table
+
+Shows all your campaigns with full metrics. Key columns:
+
+| Column | What to Focus On |
+|--------|-----------------|
+| **CTR (%)** | How compelling your ad is. Compare across campaigns — the highest CTR has the best creative. |
+| **CPC ($)** | Cost efficiency of clicks. Lower = better targeting + creative combo. |
+| **Engagements** | Raw volume of interactions. High spend + low engagements = wasted budget. |
+| **Messages** | If you sell via DM, this is your most important column. Sort by this. |
+
+**Spend vs Reach scatter plot:** Look for campaigns in the **top-left** (high reach, low spend) — those are your winners. Bottom-right (high spend, low reach) = underperformers to reconsider.
+
+### 4d. Strategy by Objective
+
+Compares campaign objectives (e.g., REACH, ENGAGEMENT, MESSAGES, TRAFFIC, CONVERSIONS).
+
+**What each objective is best for:**
+
+| Objective | Best For | Key Metric to Watch |
+|-----------|---------|-------------------|
+| **REACH** | Brand awareness, launching new products | Cost per 1K reach |
+| **POST_ENGAGEMENT** | Growing engagement, social proof | Cost per engagement |
+| **MESSAGES** | Getting DMs/orders | Cost per message started |
+| **TRAFFIC** | Driving website visits | CPC and link clicks |
+| **CONVERSIONS** | Sales/sign-ups | Cost per action |
+| **VIDEO_VIEWS** | Content visibility, remarketing audiences | Cost per ThruPlay |
+
+**Top Boost Strategies table:** Shows you which objective delivers the best results for reach, engagement, and cost-efficiency. Use this to decide where to allocate your next budget.
+
+### 4e. Placement Analysis
+
+Shows how your ads perform across different Instagram placements:
+
+| Placement | Typical Behavior |
+|-----------|-----------------|
+| **Feed** | Highest reach, moderate CTR. Best for broad awareness. |
+| **Stories** | High CTR, lower CPM. Best for direct response (swipe-up). |
+| **Reels** | Growing reach, lower CPC. Best for discovery and younger audiences. |
+| **Explore** | Reaches new audiences. Higher CPM but reaches people outside your followers. |
+
+**Cost per 1K Reach chart:** The placement with the lowest bar is where your money goes furthest. Shift budget toward it.
+
+### 4f. Top Boosted Ads
+
+Four rankings of your individual ads:
+
+| Ranking | What It Tells You |
+|---------|-------------------|
+| **Top by Reach** | Which ads the algorithm is showing to the most people |
+| **Top by Engagements** | Which ads people interact with most |
+| **Top by Messages** | Which ads drive the most DM conversations/orders |
+| **Most Cost-Efficient** | Best return per dollar spent |
+
+**Action:** Study your top-performing ads. What do they have in common? Use those patterns for future boosts.
+
+### 4g. Spend Trend
+
+Daily charts showing:
+- **Spend vs Reach over time** — are you getting more reach as you spend more, or diminishing returns?
+- **Engagements vs CTR over time** — is your ad creative getting stale (CTR dropping)?
+- **Cumulative spend** — total budget consumed over the period.
+
+**What to watch for:**
+- **Declining CTR over time** = ad fatigue. Rotate your creatives.
+- **Increasing CPC over time** = competition heating up or audience saturation. Broaden targeting.
+- **Flat reach despite increasing spend** = you've saturated your audience. Expand or pause.
+
+---
+
+## 5. Audience Demographics
 
 Understanding WHO your audience is helps you create content FOR them.
 
@@ -171,7 +272,7 @@ Understanding WHO your audience is helps you create content FOR them.
 
 ---
 
-## 5. Optimal Posting Times
+## 6. Optimal Posting Times
 
 These charts help you find **when** to post for maximum impact.
 
@@ -205,7 +306,7 @@ These charts help you find **when** to post for maximum impact.
 
 ---
 
-## 6. Hashtag Analysis
+## 7. Hashtag Analysis
 
 ### 6a. Most Used Hashtags (Top 15)
 
@@ -230,7 +331,7 @@ These charts help you find **when** to post for maximum impact.
 
 ---
 
-## 7. Stories Performance
+## 8. Stories Performance
 
 Stories data is only available for the last 24 hours.
 
@@ -251,7 +352,7 @@ Stories data is only available for the last 24 hours.
 
 ---
 
-## 8. Marketing KPI Summary
+## 9. Marketing KPI Summary
 
 This section consolidates everything into three pillars:
 
@@ -294,7 +395,7 @@ This section consolidates everything into three pillars:
 
 ---
 
-## 9. Benchmarks & Thresholds
+## 10. Benchmarks & Thresholds
 
 Use these as general guidelines (industry averages vary):
 
@@ -321,14 +422,13 @@ Use these as general guidelines (industry averages vary):
 
 ---
 
-## 10. What's NOT Tracked (Limitations)
+## 11. What's NOT Tracked (Limitations)
 
-The dashboard currently tracks **organic content performance only**. The following are NOT included:
+The dashboard tracks **organic content + paid ad performance**. The following are still NOT included:
 
 | Feature | Why Not |
 |---------|---------|
-| **Paid Ad Performance** | Requires Meta Ads API (separate from Instagram Graph API) |
-| **Direct Messages / Order Messages** | Instagram Graph API does not expose DM analytics |
+| **Direct Messages / Order Messages** | Instagram Graph API does not expose DM content analytics (but "Messages Started" from ads IS tracked via Meta Ads API) |
 | **Sales / Revenue / Conversions** | Requires integration with your e-commerce platform |
 | **Competitor Analysis** | API only provides data for your own account |
 | **Follower Source (how they found you)** | Not available via API |
@@ -340,6 +440,7 @@ The dashboard currently tracks **organic content performance only**. The followi
 Even without direct tracking, you can draw conclusions:
 
 - **Which content drives followers:** Compare follower growth trend with your posting history. Days with follower spikes likely correspond to high-reach posts from the Top 10 tables.
+- **Which ads drive the most orders:** Sort boosted ads by "Messages Started" (Section 4e) — this tracks how many DM conversations your ads initiate. If your orders come via DM, this is your closest proxy to order tracking.
 - **Which content drives orders:** If you notice your best-performing content type (from Content Performance section) correlates with days you receive more DMs/orders, double down on that type.
 - **Ad strategy insights:** Use the "Best Content Type", "Best Day", and "Best Hour" insights to inform your ad targeting and scheduling. Content that performs well organically often performs well as paid ads too.
 

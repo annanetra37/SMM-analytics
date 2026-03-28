@@ -10,6 +10,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from datetime import datetime
 from instagram_api import InstagramAPI
+from meta_ads_api import MetaAdsAPI
 
 st.set_page_config(
     page_title="Instagram Analytics Dashboard",
@@ -43,6 +44,10 @@ st.sidebar.markdown("---")
 
 access_token = st.sidebar.text_input("Access Token", type="password", help="Your Instagram Graph API long-lived token")
 account_id = st.sidebar.text_input("Account ID", help="Your Instagram Business Account ID")
+ad_account_id = st.sidebar.text_input(
+    "Ad Account ID (optional)",
+    help="Your Meta Ad Account ID (format: act_XXXXXXXXX). Required for boost/ad analytics.",
+)
 days_range = st.sidebar.slider("Analysis Period (days)", 7, 90, 30)
 media_limit = st.sidebar.slider("Posts to Analyze", 10, 200, 50)
 
@@ -63,6 +68,7 @@ if not access_token or not account_id:
     - **Account Overview** — followers, reach, impressions, profile activity
     - **Growth Tracking** — daily follower growth and reach trends
     - **Content Performance** — engagement rates, top posts, content type analysis
+    - **Boost & Ad Strategy** — paid campaign comparison, ROI, placement analysis *(optional — requires Ad Account ID)*
     - **Audience Demographics** — age, gender, location breakdowns
     - **Optimal Posting Times** — when your followers are most active
     - **Engagement Analysis** — likes, comments, saves, shares breakdown
@@ -86,6 +92,20 @@ def load_all_data(token: str, acc_id: str, days: int, limit: int):
     return account, insights, online, media, stories
 
 
+@st.cache_data(ttl=900, show_spinner="Fetching ad campaign data...")
+def load_ads_data(token: str, ad_acc_id: str, days: int):
+    ads_api = MetaAdsAPI(access_token=token, ad_account_id=ad_acc_id)
+
+    account_ads = ads_api.get_account_ad_insights(days=days)
+    campaigns = ads_api.get_campaigns(days=days)
+    campaign_insights = ads_api.get_campaign_insights(days=days)
+    ad_insights = ads_api.get_ad_insights(days=days)
+    placement_insights = ads_api.get_placement_insights(days=days)
+    daily_ads = ads_api.get_daily_ad_insights(days=days)
+
+    return account_ads, campaigns, campaign_insights, ad_insights, placement_insights, daily_ads
+
+
 try:
     account, insights, online_followers, media_list, stories = load_all_data(
         access_token, account_id, days_range, media_limit
@@ -93,6 +113,18 @@ try:
 except Exception as e:
     st.error(f"Failed to fetch data: {e}")
     st.stop()
+
+# Load ads data if Ad Account ID is provided
+ads_data_loaded = False
+if ad_account_id:
+    try:
+        (
+            account_ads, campaigns, campaign_insights,
+            ad_insights, placement_insights, daily_ads,
+        ) = load_ads_data(access_token, ad_account_id, days_range)
+        ads_data_loaded = True
+    except Exception as e:
+        st.sidebar.warning(f"Ad data unavailable: {e}")
 
 
 # ── Helper Functions ──────────────────────────────────────────────────────────
@@ -381,7 +413,422 @@ if not media_df.empty:
         )
 
 
-# ── 4. Audience Demographics ─────────────────────────────────────────────────
+# ── 4. Boost & Ad Strategy Performance ───────────────────────────────────────
+
+st.header("Boost & Ad Strategy Performance")
+
+if not ads_data_loaded:
+    st.info(
+        "Enter your **Meta Ad Account ID** in the sidebar to unlock boost/ad analytics. "
+        "Format: `act_XXXXXXXXX`. Your access token needs the `ads_read` permission."
+    )
+else:
+
+    # ── Helper: extract a specific action value from the actions list ──
+    def _get_action_value(actions: list[dict] | None, action_type: str) -> int:
+        if not actions:
+            return 0
+        for a in actions:
+            if a.get("action_type") == action_type:
+                return int(a.get("value", 0))
+        return 0
+
+    def _get_cost_per_action(costs: list[dict] | None, action_type: str) -> float:
+        if not costs:
+            return 0.0
+        for a in costs:
+            if a.get("action_type") == action_type:
+                return float(a.get("value", 0))
+        return 0.0
+
+    # ── 4a. Boost Overview KPIs ──────────────────────────────────────
+    ad_tabs = st.tabs([
+        "Overview", "Campaign Comparison", "Strategy by Objective",
+        "Placement Analysis", "Top Boosted Ads", "Spend Trend",
+    ])
+
+    with ad_tabs[0]:
+        if account_ads:
+            ad_summary = account_ads[0]
+            total_spend = float(ad_summary.get("spend", 0))
+            total_imp = int(ad_summary.get("impressions", 0))
+            total_reach = int(ad_summary.get("reach", 0))
+            total_clicks = int(ad_summary.get("clicks", 0))
+            avg_cpm = float(ad_summary.get("cpm", 0))
+            avg_cpc = float(ad_summary.get("cpc", 0))
+            avg_ctr = float(ad_summary.get("ctr", 0))
+            avg_freq = float(ad_summary.get("frequency", 0))
+
+            actions = ad_summary.get("actions", [])
+            total_follows = _get_action_value(actions, "page_engagement") + _get_action_value(actions, "like")
+            total_link_clicks = _get_action_value(actions, "link_click")
+            total_post_engagement = _get_action_value(actions, "post_engagement")
+            total_messages = _get_action_value(actions, "onsite_conversion.messaging_conversation_started_7d")
+
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("Total Ad Spend", f"${total_spend:,.2f}")
+            c2.metric("Paid Reach", f"{total_reach:,}")
+            c3.metric("Paid Impressions", f"{total_imp:,}")
+            c4.metric("Total Clicks", f"{total_clicks:,}")
+
+            c5, c6, c7, c8 = st.columns(4)
+            c5.metric("Avg CPM", f"${avg_cpm:.2f}")
+            c6.metric("Avg CPC", f"${avg_cpc:.2f}")
+            c7.metric("Avg CTR", f"{avg_ctr:.2f}%")
+            c8.metric("Avg Frequency", f"{avg_freq:.1f}x")
+
+            c9, c10, c11, c12 = st.columns(4)
+            c9.metric("Post Engagements", f"{total_post_engagement:,}")
+            c10.metric("Link Clicks", f"{total_link_clicks:,}")
+            c11.metric("Messages Started", f"{total_messages:,}")
+            cost_per_engage = total_spend / max(total_post_engagement, 1)
+            c12.metric("Cost per Engagement", f"${cost_per_engage:.3f}")
+
+            # Organic vs Paid comparison
+            if not media_df.empty:
+                st.markdown("---")
+                st.markdown("### Organic vs Paid Comparison")
+                org_reach = media_df["reach"].sum()
+                org_impressions = media_df["impressions"].sum()
+                org_engagement = media_df["engagement"].sum()
+
+                comp_col1, comp_col2, comp_col3 = st.columns(3)
+                with comp_col1:
+                    fig = go.Figure(data=[go.Bar(
+                        x=["Organic", "Paid"],
+                        y=[org_reach, total_reach],
+                        marker_color=["#667eea", "#f093fb"],
+                    )])
+                    fig.update_layout(title="Reach: Organic vs Paid", yaxis_title="Accounts Reached")
+                    st.plotly_chart(fig, use_container_width=True)
+
+                with comp_col2:
+                    fig = go.Figure(data=[go.Bar(
+                        x=["Organic", "Paid"],
+                        y=[org_impressions, total_imp],
+                        marker_color=["#667eea", "#f093fb"],
+                    )])
+                    fig.update_layout(title="Impressions: Organic vs Paid", yaxis_title="Impressions")
+                    st.plotly_chart(fig, use_container_width=True)
+
+                with comp_col3:
+                    fig = go.Figure(data=[go.Bar(
+                        x=["Organic", "Paid"],
+                        y=[org_engagement, total_post_engagement],
+                        marker_color=["#667eea", "#f093fb"],
+                    )])
+                    fig.update_layout(title="Engagements: Organic vs Paid", yaxis_title="Engagements")
+                    st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("No ad performance data found for this period.")
+
+    # ── 4b. Campaign Comparison ──────────────────────────────────────
+    with ad_tabs[1]:
+        if campaign_insights:
+            camp_rows = []
+            for c in campaign_insights:
+                actions = c.get("actions", [])
+                costs = c.get("cost_per_action_type", [])
+                camp_rows.append({
+                    "Campaign": c.get("campaign_name", "Unknown"),
+                    "Objective": c.get("objective", "N/A"),
+                    "Spend": float(c.get("spend", 0)),
+                    "Impressions": int(c.get("impressions", 0)),
+                    "Reach": int(c.get("reach", 0)),
+                    "Clicks": int(c.get("clicks", 0)),
+                    "CTR (%)": round(float(c.get("ctr", 0)), 2),
+                    "CPC ($)": round(float(c.get("cpc", 0)), 2),
+                    "CPM ($)": round(float(c.get("cpm", 0)), 2),
+                    "Frequency": round(float(c.get("frequency", 0)), 1),
+                    "Engagements": _get_action_value(actions, "post_engagement"),
+                    "Link Clicks": _get_action_value(actions, "link_click"),
+                    "Messages": _get_action_value(actions, "onsite_conversion.messaging_conversation_started_7d"),
+                })
+            camp_df = pd.DataFrame(camp_rows)
+
+            st.dataframe(camp_df, use_container_width=True, hide_index=True)
+
+            if len(camp_df) > 1:
+                col1, col2 = st.columns(2)
+                with col1:
+                    fig = px.bar(
+                        camp_df.nlargest(10, "Reach"),
+                        x="Campaign", y="Reach",
+                        title="Top Campaigns by Reach",
+                        color="Objective",
+                        color_discrete_sequence=px.colors.qualitative.Set2,
+                    )
+                    fig.update_layout(xaxis_tickangle=-45)
+                    st.plotly_chart(fig, use_container_width=True)
+
+                with col2:
+                    fig = px.bar(
+                        camp_df.nlargest(10, "Engagements"),
+                        x="Campaign", y="Engagements",
+                        title="Top Campaigns by Engagements",
+                        color="Objective",
+                        color_discrete_sequence=px.colors.qualitative.Set2,
+                    )
+                    fig.update_layout(xaxis_tickangle=-45)
+                    st.plotly_chart(fig, use_container_width=True)
+
+                # Spend vs Results scatter
+                fig = px.scatter(
+                    camp_df, x="Spend", y="Reach", size="Engagements",
+                    color="Objective", hover_name="Campaign",
+                    title="Campaign ROI: Spend vs Reach (bubble = engagements)",
+                    color_discrete_sequence=px.colors.qualitative.Set2,
+                )
+                st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("No campaign data found.")
+
+    # ── 4c. Strategy by Objective ────────────────────────────────────
+    with ad_tabs[2]:
+        if campaign_insights:
+            obj_rows = []
+            for c in campaign_insights:
+                actions = c.get("actions", [])
+                obj_rows.append({
+                    "objective": c.get("objective", "UNKNOWN"),
+                    "spend": float(c.get("spend", 0)),
+                    "impressions": int(c.get("impressions", 0)),
+                    "reach": int(c.get("reach", 0)),
+                    "clicks": int(c.get("clicks", 0)),
+                    "ctr": float(c.get("ctr", 0)),
+                    "engagements": _get_action_value(actions, "post_engagement"),
+                    "link_clicks": _get_action_value(actions, "link_click"),
+                    "messages": _get_action_value(actions, "onsite_conversion.messaging_conversation_started_7d"),
+                })
+            obj_df = pd.DataFrame(obj_rows)
+
+            obj_summary = obj_df.groupby("objective").agg(
+                campaigns=("objective", "count"),
+                total_spend=("spend", "sum"),
+                total_reach=("reach", "sum"),
+                total_impressions=("impressions", "sum"),
+                total_clicks=("clicks", "sum"),
+                avg_ctr=("ctr", "mean"),
+                total_engagements=("engagements", "sum"),
+                total_link_clicks=("link_clicks", "sum"),
+                total_messages=("messages", "sum"),
+            ).round(2).reset_index()
+
+            # Cost efficiency per objective
+            obj_summary["cost_per_reach"] = (obj_summary["total_spend"] / obj_summary["total_reach"].replace(0, 1)).round(4)
+            obj_summary["cost_per_engagement"] = (obj_summary["total_spend"] / obj_summary["total_engagements"].replace(0, 1)).round(4)
+
+            st.markdown("### Performance by Campaign Objective")
+            st.dataframe(obj_summary, use_container_width=True, hide_index=True)
+
+            if len(obj_summary) > 1:
+                col1, col2 = st.columns(2)
+                with col1:
+                    fig = px.bar(
+                        obj_summary, x="objective", y="total_reach",
+                        title="Total Reach by Objective",
+                        color="objective",
+                        color_discrete_sequence=px.colors.qualitative.Pastel,
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+
+                with col2:
+                    fig = px.bar(
+                        obj_summary, x="objective", y="cost_per_engagement",
+                        title="Cost per Engagement by Objective",
+                        color="objective",
+                        color_discrete_sequence=px.colors.qualitative.Pastel,
+                    )
+                    fig.update_layout(yaxis_title="Cost per Engagement ($)")
+                    st.plotly_chart(fig, use_container_width=True)
+
+                # Radar chart comparing objectives
+                radar_cats = ["total_reach", "total_impressions", "total_clicks", "total_engagements", "total_messages"]
+                fig = go.Figure()
+                for _, row in obj_summary.iterrows():
+                    vals = [row[c] for c in radar_cats]
+                    max_val = max(vals) if max(vals) > 0 else 1
+                    normalized = [v / max_val * 100 for v in vals]
+                    labels = ["Reach", "Impressions", "Clicks", "Engagements", "Messages"]
+                    fig.add_trace(go.Scatterpolar(
+                        r=normalized + [normalized[0]],
+                        theta=labels + [labels[0]],
+                        name=row["objective"],
+                        fill="toself",
+                    ))
+                fig.update_layout(title="Objective Strategy Comparison (Normalized)")
+                st.plotly_chart(fig, use_container_width=True)
+
+                # Best strategy recommendation
+                if not obj_summary.empty:
+                    best_reach = obj_summary.loc[obj_summary["total_reach"].idxmax(), "objective"]
+                    best_engage = obj_summary.loc[obj_summary["total_engagements"].idxmax(), "objective"]
+                    cheapest = obj_summary.loc[obj_summary["cost_per_engagement"].idxmin(), "objective"]
+
+                    st.markdown("### Top Boost Strategies")
+                    st.markdown(f"""
+| Strategy Goal | Best Objective | Why |
+|--------------|---------------|-----|
+| Maximum Reach | **{best_reach}** | Highest total reach across campaigns |
+| Most Engagement | **{best_engage}** | Drives the most post interactions |
+| Most Cost-Efficient | **{cheapest}** | Lowest cost per engagement |
+""")
+        else:
+            st.info("No campaign objective data found.")
+
+    # ── 4d. Placement Analysis ───────────────────────────────────────
+    with ad_tabs[3]:
+        if placement_insights:
+            place_rows = []
+            for p in placement_insights:
+                actions = p.get("actions", [])
+                place_rows.append({
+                    "Placement": p.get("platform_position", "Unknown"),
+                    "Spend": float(p.get("spend", 0)),
+                    "Impressions": int(p.get("impressions", 0)),
+                    "Reach": int(p.get("reach", 0)),
+                    "Clicks": int(p.get("clicks", 0)),
+                    "CTR (%)": round(float(p.get("ctr", 0)), 2),
+                    "CPC ($)": round(float(p.get("cpc", 0)), 2),
+                    "CPM ($)": round(float(p.get("cpm", 0)), 2),
+                    "Engagements": _get_action_value(actions, "post_engagement"),
+                })
+            place_df = pd.DataFrame(place_rows)
+
+            st.dataframe(place_df, use_container_width=True, hide_index=True)
+
+            if len(place_df) > 1:
+                col1, col2 = st.columns(2)
+                with col1:
+                    fig = px.pie(
+                        place_df, names="Placement", values="Spend",
+                        title="Ad Spend by Placement",
+                        color_discrete_sequence=px.colors.qualitative.Set2,
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+
+                with col2:
+                    fig = px.pie(
+                        place_df, names="Placement", values="Reach",
+                        title="Reach by Placement",
+                        color_discrete_sequence=px.colors.qualitative.Pastel,
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+
+                # Efficiency comparison
+                place_df["Cost per 1K Reach"] = (place_df["Spend"] / place_df["Reach"].replace(0, 1) * 1000).round(2)
+                fig = px.bar(
+                    place_df, x="Placement", y="Cost per 1K Reach",
+                    title="Cost per 1,000 Reach by Placement (lower = better)",
+                    color="Placement",
+                    color_discrete_sequence=px.colors.qualitative.Set2,
+                )
+                fig.update_layout(yaxis_title="$ per 1,000 Reach")
+                st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("No placement breakdown data found.")
+
+    # ── 4e. Top Boosted Ads ──────────────────────────────────────────
+    with ad_tabs[4]:
+        if ad_insights:
+            ad_rows = []
+            for a in ad_insights:
+                actions = a.get("actions", [])
+                ad_rows.append({
+                    "Ad Name": a.get("ad_name", "Unknown"),
+                    "Campaign": a.get("campaign_name", ""),
+                    "Objective": a.get("objective", "N/A"),
+                    "Spend": float(a.get("spend", 0)),
+                    "Reach": int(a.get("reach", 0)),
+                    "Impressions": int(a.get("impressions", 0)),
+                    "Clicks": int(a.get("clicks", 0)),
+                    "CTR (%)": round(float(a.get("ctr", 0)), 2),
+                    "CPC ($)": round(float(a.get("cpc", 0)), 2),
+                    "Engagements": _get_action_value(actions, "post_engagement"),
+                    "Link Clicks": _get_action_value(actions, "link_click"),
+                    "Messages": _get_action_value(actions, "onsite_conversion.messaging_conversation_started_7d"),
+                })
+            ads_df = pd.DataFrame(ad_rows)
+
+            st.subheader("Top 10 Ads by Reach")
+            st.dataframe(ads_df.nlargest(10, "Reach"), use_container_width=True, hide_index=True)
+
+            st.subheader("Top 10 Ads by Engagements")
+            st.dataframe(ads_df.nlargest(10, "Engagements"), use_container_width=True, hide_index=True)
+
+            st.subheader("Top 10 Ads by Messages Started")
+            st.dataframe(ads_df.nlargest(10, "Messages"), use_container_width=True, hide_index=True)
+
+            # Most cost-efficient ads
+            ads_df["Cost per Engagement"] = (ads_df["Spend"] / ads_df["Engagements"].replace(0, 1)).round(3)
+            efficient = ads_df[ads_df["Engagements"] > 0].nsmallest(10, "Cost per Engagement")
+            if not efficient.empty:
+                st.subheader("Top 10 Most Cost-Efficient Ads")
+                st.dataframe(efficient, use_container_width=True, hide_index=True)
+        else:
+            st.info("No individual ad data found.")
+
+    # ── 4f. Spend Trend ──────────────────────────────────────────────
+    with ad_tabs[5]:
+        if daily_ads:
+            trend_rows = []
+            for d in daily_ads:
+                actions = d.get("actions", [])
+                trend_rows.append({
+                    "date": d.get("date_start", ""),
+                    "spend": float(d.get("spend", 0)),
+                    "impressions": int(d.get("impressions", 0)),
+                    "reach": int(d.get("reach", 0)),
+                    "clicks": int(d.get("clicks", 0)),
+                    "cpm": float(d.get("cpm", 0)),
+                    "ctr": float(d.get("ctr", 0)),
+                    "engagements": _get_action_value(actions, "post_engagement"),
+                })
+            trend_df = pd.DataFrame(trend_rows)
+            trend_df["date"] = pd.to_datetime(trend_df["date"])
+
+            fig = make_subplots(specs=[[{"secondary_y": True}]])
+            fig.add_trace(
+                go.Bar(x=trend_df["date"], y=trend_df["spend"], name="Spend ($)", marker_color="#f093fb"),
+                secondary_y=False,
+            )
+            fig.add_trace(
+                go.Scatter(x=trend_df["date"], y=trend_df["reach"], name="Reach", marker_color="#667eea", mode="lines+markers"),
+                secondary_y=True,
+            )
+            fig.update_layout(title="Daily Ad Spend vs Reach")
+            fig.update_yaxes(title_text="Spend ($)", secondary_y=False)
+            fig.update_yaxes(title_text="Reach", secondary_y=True)
+            st.plotly_chart(fig, use_container_width=True)
+
+            # Engagement trend
+            fig = make_subplots(specs=[[{"secondary_y": True}]])
+            fig.add_trace(
+                go.Bar(x=trend_df["date"], y=trend_df["engagements"], name="Engagements", marker_color="#4ecdc4"),
+                secondary_y=False,
+            )
+            fig.add_trace(
+                go.Scatter(x=trend_df["date"], y=trend_df["ctr"], name="CTR %", marker_color="#ff6b6b", mode="lines+markers"),
+                secondary_y=True,
+            )
+            fig.update_layout(title="Daily Ad Engagements vs CTR")
+            fig.update_yaxes(title_text="Engagements", secondary_y=False)
+            fig.update_yaxes(title_text="CTR %", secondary_y=True)
+            st.plotly_chart(fig, use_container_width=True)
+
+            # Cumulative spend
+            trend_df["cumulative_spend"] = trend_df["spend"].cumsum()
+            trend_df["cumulative_reach"] = trend_df["reach"].cumsum()
+            fig = px.area(trend_df, x="date", y="cumulative_spend",
+                          title="Cumulative Ad Spend Over Time",
+                          color_discrete_sequence=["#764ba2"])
+            fig.update_layout(yaxis_title="Cumulative Spend ($)")
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("No daily ad trend data found.")
+
+
+# ── 5. Audience Demographics ──────────────────────────────────────────────────
 
 st.header("Audience Demographics")
 
